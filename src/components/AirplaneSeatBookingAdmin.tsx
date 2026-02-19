@@ -1,25 +1,30 @@
 // src/components/AirplaneSeatBookingAdmin.tsx
 "use client"
 
+
 import React, { useState, useEffect } from 'react';
 import { Check, X } from 'lucide-react';
 import { useSession } from "next-auth/react";
+
 
 /* eslint-disable */
 interface AirplaneSeatBookingAdminProps {
   tableHeader?: string; // This can be removed if you only use session
 }
 
+
 const AirplaneSeatBookingAdmin: React.FC<AirplaneSeatBookingAdminProps> = ({ tableHeader }) => {
   const { data: session, status } = useSession();
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [selectedSeats, setSelectedSeats] = useState([]);
-    const [inputMode, setInputMode] = useState('add');
+    const [inputMode, setInputMode] = useState('all');
     const [bookings, setBookings] = useState({});
     const [pendingSeats, setPendingSeats] = useState({}); 
     const [isLoading, setIsLoading] = useState(false);
     const [dateTimeInputs, setDateTimeInputs] = useState({});
     const [purpose, setPurpose] = useState(''); // Add this new state
+    // Add this with your other useState declarations
+const [currentTime, setCurrentTime] = useState(new Date());
     const [bulkDateTime, setBulkDateTime] = useState({
       dateIn: '',
       dateOut: '',
@@ -150,19 +155,13 @@ const AirplaneSeatBookingAdmin: React.FC<AirplaneSeatBookingAdminProps> = ({ tab
       }
     };
   
-    useEffect(() => {
-     // fetch('/api/dropdown')
-     //   .then((res) => res.json())
-     //   .then((data) => {
-      //    setOptions(data);
-      //    setIsLoading(false);
-       // })
-       // .catch((err) => {
-       //   console.error('Error fetching data:', err);
-       //   setIsLoading(false);
-      //  });
-    }, []); 
-  
+   useEffect(() => {
+  const timer = setInterval(() => {
+    setCurrentTime(new Date());
+  }, 1000);
+
+  return () => clearInterval(timer); // Cleanup on unmount
+}, []);
     useEffect(() => {
       fetchReservations();
     }, []);
@@ -321,6 +320,7 @@ const AirplaneSeatBookingAdmin: React.FC<AirplaneSeatBookingAdminProps> = ({ tab
       alert(`Added ${availableSeats.length} seats to your booking`);
     };
 
+
     // New helper function for single seat booking
 const handleBookingWithData = async (seatId, seatData) => {
   // ✅ ADD: Validate purpose
@@ -329,7 +329,9 @@ const handleBookingWithData = async (seatId, seatData) => {
     return;
   }
 
+
   setIsLoading(true);
+
 
   const payload = {
     username: username,
@@ -345,7 +347,9 @@ const handleBookingWithData = async (seatId, seatData) => {
     }],
   };
 
+
   console.log("Single booking payload:", payload);
+
 
   try {
     const response = await fetch('/api/reservations?role=admin', {  // ✅ FIXED: removed extra ?
@@ -357,6 +361,7 @@ const handleBookingWithData = async (seatId, seatData) => {
       body: JSON.stringify(payload),
     });
 
+
     let responseData;
     try {
       responseData = await response.json();
@@ -364,6 +369,7 @@ const handleBookingWithData = async (seatId, seatData) => {
       console.error('Error parsing response:', parseError);
       throw new Error('Invalid response from server');
     }
+
 
     if (response.ok) {
       alert(`Successfully booked seat ${seatId} in ${selectedRoom.name}!`);
@@ -388,6 +394,7 @@ const handleBookingWithData = async (seatId, seatData) => {
     setIsLoading(false);
   }
 };
+
 
   
     const handleBulkDateTimeChange = (field, value) => {
@@ -420,14 +427,17 @@ const handleBookingWithData = async (seatId, seatData) => {
     return { valid: false, message: 'Please select at least one seat.' };
   }
 
+
   if (!selectedRoom) {
     return { valid: false, message: 'Please select a room.' };
   }
+
 
   // ✅ ADD: Purpose validation for BOTH modes
   if (!purpose || purpose.trim() === '') {
     return { valid: false, message: 'Please enter the purpose of booking.' };
   }
+
 
   // FOR BULK/ALL MODE
   if (inputMode === 'all') {
@@ -435,22 +445,27 @@ const handleBookingWithData = async (seatId, seatData) => {
       return { valid: false, message: 'Please complete all date and time fields.' };
     }
 
+
     const dateIn = new Date(bulkDateTime.dateIn);
     const dateOut = new Date(bulkDateTime.dateOut);
+
 
     if (isNaN(dateIn.getTime()) || isNaN(dateOut.getTime())) {
       return { valid: false, message: 'Invalid date format.' };
     }
 
+
     if (dateOut < dateIn) {
       return { valid: false, message: 'End date must be after start date.' };
     }
 
+
     return { valid: true };
   }
 
-  // FOR INDIVIDUAL MODE
-  if (inputMode === 'add') {
+
+  /* FOR INDIVIDUAL MODE 
+  if (inputMode === 'add') { 
     for (const seatId of selectedSeats) {
       const seatData = dateTimeInputs[seatId];
       
@@ -462,8 +477,10 @@ const handleBookingWithData = async (seatId, seatData) => {
         return { valid: false, message: `Please complete all fields for seat ${seatId}.` };
       }
 
+
       const dateIn = new Date(seatData.dateIn);
       const dateOut = new Date(seatData.dateOut);
+
 
       if (isNaN(dateIn.getTime()) || isNaN(dateOut.getTime())) {
         return { valid: false, message: `Invalid date format for seat ${seatId}.` };
@@ -473,7 +490,8 @@ const handleBookingWithData = async (seatId, seatData) => {
         return { valid: false, message: `End date must be after start date for seat ${seatId}.` };
       }
     }
-  }
+ } */
+
 
   return { valid: true };
 };
@@ -487,7 +505,9 @@ const handleBookingWithData = async (seatId, seatData) => {
     return;
   }
 
+
   setIsLoading(true);
+
 
   const payload = {
     username: username,
@@ -496,15 +516,17 @@ const handleBookingWithData = async (seatId, seatData) => {
     purpose: purpose,  // ✅ ADD: purpose at payload level
     seats: selectedSeats.map(seatId => ({
       seat: seatId,
-      date_in: inputMode === 'add' ? dateTimeInputs[seatId].dateIn : bulkDateTime.dateIn,
-      date_out: inputMode === 'add' ? dateTimeInputs[seatId].dateOut : bulkDateTime.dateOut,
-      period_time: inputMode === 'add' ? dateTimeInputs[seatId].periodTime : bulkDateTime.periodTime,
+      date_in:  bulkDateTime.dateIn,
+      date_out:  bulkDateTime.dateOut,
+      period_time: bulkDateTime.periodTime,
       advisor_name: 'N/A',  // ✅ CHANGED: from '-' to 'N/A' for consistency
       // ❌ REMOVE: purpose from seat level
     })),
   };
 
+
   console.log("Booking payload:", payload);
+
 
   try {
     const response = await fetch('/api/reservations?role=admin', {
@@ -516,6 +538,7 @@ const handleBookingWithData = async (seatId, seatData) => {
       body: JSON.stringify(payload),
     });
 
+
     let responseData;
     try {
       responseData = await response.json();
@@ -523,6 +546,7 @@ const handleBookingWithData = async (seatId, seatData) => {
       console.error('Error parsing response:', parseError);
       throw new Error('Invalid response from server');
     }
+
 
     if (response.ok) {
       alert(`Successfully booked ${selectedSeats.length} seat(s) in ${selectedRoom.name}!`);
@@ -533,6 +557,7 @@ const handleBookingWithData = async (seatId, seatData) => {
       setBulkDateTime({ dateIn: '', dateOut: '', periodTime: 'choose' });
       setFormInput({ seatId: '', dateIn: '', dateOut: '', periodTime: 'choose' });
       setPurpose(''); // ✅ Reset purpose
+
 
       // Refresh reservations from database
       await fetchReservations();
@@ -602,42 +627,107 @@ const handleBookingWithData = async (seatId, seatData) => {
           <p className="text-gray-600 text-center">Welcome {username}</p>
         </div>
 
+
         {/* Room Selection */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6 w-full">
           <h2 className="text-xl font-bold mb-4 text-center">Select Room</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             {rooms.map((room) => (
-              <div
-                key={room.id}
-                onClick={() => {
-                  setSelectedRoom(room);
-                  setInputMode('add');
-                  setSelectedSeats([]);
-                  setDateTimeInputs({});
-                  setFormInput({ seatId: '', dateIn: '', dateOut: '', periodTime: 'choose' });
-                  setBulkDateTime({ dateIn: '', dateOut: '', periodTime: 'choose' });
-                   setPurpose(''); // Reset purpose
+              // In the Room Selection section, update the onClick handler:
 
 
-                }}
-                className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  selectedRoom?.id === room.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300 hover:border-blue-300'
-                }`}
-              >
-                <h3 className="font-bold text-lg text-center">{room.name}</h3>
-                <p className="text-sm text-gray-600 text-center">Capacity: {room.capacity}</p>
-                <p className="text-sm text-gray-600 text-center">
-                  Occupied: {bookings[room.id]?.length || 0}
-                </p>
-              </div>
+<div
+  key={room.id}
+  onClick={() => {
+    setSelectedRoom(room);
+    setInputMode('all');
+    setDateTimeInputs({});
+    setFormInput({ seatId: '', dateIn: '', dateOut: '', periodTime: 'choose' });
+    setBulkDateTime({ dateIn: '', dateOut: '', periodTime: 'choose' });
+    setPurpose('');
+    
+    // Auto-select all available seats immediately
+    const availableSeats = [];
+    const seatPattern = room.layout[0].seatWidth;
+    const seatLetters = seatPattern.replace(/\s+/g, '').split('');
+    
+    for (let row = 1; row <= room.rows; row++) {
+      seatLetters.forEach((letter) => {
+        const seatId = `${row}${letter}`;
+        if (!room.unused.includes(seatId) && 
+            !bookings[room.id]?.includes(seatId) &&
+            !pendingSeats[room.id]?.includes(seatId)) {
+          availableSeats.push(seatId);
+        }
+      });
+    }
+    
+    setSelectedSeats(availableSeats); // This will make all available seats blue
+  }}
+  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+    selectedRoom?.id === room.id
+      ? 'border-blue-500 bg-blue-50'
+      : 'border-gray-300 hover:border-blue-300'
+  }`}
+>
+  <h3 className="font-bold text-lg text-center">{room.name}</h3>
+  <p className="text-sm text-gray-600 text-center">Capacity: {room.capacity}</p>
+  <p className="text-sm text-gray-600 text-center">
+    Occupied: {bookings[room.id]?.length || 0}
+  </p>
+</div>
             ))}
           </div>
         </div>
 
+
         {selectedRoom && (
           <>
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6 w-full">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {/* Date Block */}
+    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+      <div className="text-blue-600">
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+      <div>
+        <p className="text-sm text-gray-600">Today's Date</p>
+        <p className="text-lg font-bold text-gray-800">
+          {currentTime.toLocaleDateString('en-US', { 
+           // weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}
+        </p>
+      </div>
+    </div>
+
+
+    {/* Time Block */}
+    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+      <div className="text-blue-600">
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div>
+        <p className="text-sm text-gray-600">Current Time</p>
+        <p className="text-lg font-bold text-gray-800">
+          {currentTime.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit' 
+          })}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+<div className="bg-white rounded-xl shadow-lg p-6 mb-6 w-full">Event</div>
+
             {/* Seat Map */}
             <div className="bg-white rounded-xl shadow-lg p-6 mb-6 w-full">
               <h2 className="text-xl font-bold mb-4 text-center">Seat Map - {selectedRoom.name}</h2>
@@ -668,6 +758,7 @@ const handleBookingWithData = async (seatId, seatData) => {
                 </div>
               </div>
 
+
               <div className="flex justify-center overflow-x-auto">
                 <div className="inline-block">
                   {generateSeatMap(selectedRoom).map(renderSeatRow)}
@@ -684,9 +775,10 @@ const handleBookingWithData = async (seatId, seatData) => {
 <div className="bg-white rounded-xl shadow-lg p-6 mb-6 w-full">
   <h2 className="text-xl font-bold mb-4 text-center">Seat Booking</h2>
   
-  {/* Input Mode Selection */}
+  {/* Input Mode Selection 
   <div className="mb-6">
     <div className="flex gap-4 justify-center">
+     
       <button
         type="button"
         onClick={(e) => {
@@ -738,175 +830,15 @@ const handleBookingWithData = async (seatId, seatData) => {
       Room (All seats)
     </button>
     </div>
-  </div>
+  </div>*/}
+
 
   <div className="border-t border-gray-300 mb-6"></div>
 
-  {/* SINGLE MODE */}
-  {inputMode === 'add' && (
-  <div className="space-y-4">
-    <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-      <div>
-        <p className="text-sm text-gray-600">Username:</p>
-        <p className="font-semibold text-gray-800">{username}</p>
-      </div>
-      <div>
-        <p className="text-sm text-gray-600">Room:</p>
-        <p className="font-semibold text-gray-800">{selectedRoom.name}</p>
-      </div>
-    </div>
-    
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div>
-        <label className="block text-sm font-medium mb-1">Seat ID</label>
-        <input
-          type="text"
-          placeholder="e.g., 1A"
-          value={formInput.seatId}
-          onChange={(e) => {
-            const value = e.target.value.toUpperCase().trim();
-            handleFormInputChange('seatId', value);
-            
-            // Auto-select seat as user types (if valid)
-            if (value.length >= 2) {
-              const seatRegex = /^[1-9][0-9]?[A-H]$/;
-              if (seatRegex.test(value)) {
-                const seatPattern = selectedRoom.layout[0].seatWidth;
-                const seatLetters = seatPattern.replace(/\s+/g, '').split('');
-                const rowNum = parseInt(value.slice(0, -1));
-                const seatLetter = value.slice(-1);
-                
-                // Check if seat is valid and available
-                if (rowNum <= selectedRoom.rows && 
-                    seatLetters.includes(seatLetter) &&
-                    !selectedRoom.unused.includes(value) &&
-                    !bookings[selectedRoom.id]?.includes(value) &&
-                    !pendingSeats[selectedRoom.id]?.includes(value)) {
-                  setSelectedSeats([value]);
-                } else {
-                  setSelectedSeats([]);
-                }
-              } else {
-                setSelectedSeats([]);
-              }
-            } else {
-              setSelectedSeats([]);
-            }
-          }}
-          className="w-full px-3 py-2 border rounded-lg uppercase"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Date In</label>
-        <input
-          type="date"
-          value={formInput.dateIn}
-          onChange={(e) => handleFormInputChange('dateIn', e.target.value)}
-          min={minDate}
-          className="w-full px-3 py-2 border rounded-lg"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Date Out</label>
-        <input
-          type="date"
-          value={formInput.dateOut}
-          onChange={(e) => handleFormInputChange('dateOut', e.target.value)}
-          min={minDate}
-          className="w-full px-3 py-2 border rounded-lg"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Period Time</label>
-        <select
-          value={formInput.periodTime}
-          onChange={(e) => handleFormInputChange('periodTime', e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg"
-        >
-          <option value="choose">Choose time</option>
-          <option value="9:00-12:00">9:00 - 12:00</option>
-          <option value="13:00-16:00">13:00 - 16:00</option>
-          <option value="9:00-16:00">9:00 - 16:00</option>
-        </select>
-      </div>
-    </div>
-     <div>
-      <label className="block text-sm font-medium mb-1">Purpose of Booking *</label>
-      <textarea 
-        className="w-full px-3 py-2 border rounded-lg resize-none"
-        rows={3}
-        placeholder="Enter the purpose of booking the entire room (e.g., Workshop, Training, Exam, etc.)"
-        value={purpose}
-        onChange={(e) => setPurpose(e.target.value)}
-      />
-    </div>
-    <button
-      type="button"
-      onClick={(e) => {
-        e.preventDefault();
-        
-        const seatId = formInput.seatId.toUpperCase().trim();
-        
-        // Validate first
-        if (!seatId || !formInput.dateIn || !formInput.dateOut || formInput.periodTime === 'choose') {
-          alert('Please complete all fields');
-          return;
-        }
-        
-        // Validate seat exists and is available
-        const seatRegex = /^[1-9][0-9]?[A-H]$/;
-        if (!seatRegex.test(seatId)) {
-          alert('Invalid seat format. Use format like 1A, 2B, etc.');
-          return;
-        }
-
-        const seatPattern = selectedRoom.layout[0].seatWidth;
-        const seatLetters = seatPattern.replace(/\s+/g, '').split('');
-        const rowNum = parseInt(seatId.slice(0, -1));
-        const seatLetter = seatId.slice(-1);
-        
-        if (rowNum > selectedRoom.rows || !seatLetters.includes(seatLetter)) {
-          alert('Seat does not exist in this room');
-          return;
-        }
-
-        if (selectedRoom.unused.includes(seatId)) {
-          alert('This seat is not available');
-          return;
-        }
-
-        if (bookings[selectedRoom.id]?.includes(seatId)) {
-          alert('This seat is already occupied');
-          return;
-        }
-
-        if (pendingSeats[selectedRoom.id]?.includes(seatId)) {
-          alert('This seat has a pending reservation');
-          return;
-        }
-        
-        // Set states and immediately book with the seat data
-        setSelectedSeats([seatId]);
-        const seatData = {
-          dateIn: formInput.dateIn,
-          dateOut: formInput.dateOut,
-          periodTime: formInput.periodTime
-        };
-        setDateTimeInputs({ [seatId]: seatData });
-        
-        // Call booking directly with the seat data
-        handleBookingWithData(seatId, seatData);
-      }}
-      disabled={isLoading}
-      className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-bold disabled:opacity-50"
-    >
-      {isLoading ? 'Processing...' : 'Confirm Booking'}
-    </button>
-  </div>
-)}
 
   {/* ROOM MODE */}
-{inputMode === 'all' && (
+
+
   <div className="space-y-4">
     <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
       <div>
@@ -966,6 +898,7 @@ const handleBookingWithData = async (seatId, seatData) => {
     </div>
    
 
+
    <button
   type="button"
   onClick={(e) => {
@@ -978,10 +911,12 @@ const handleBookingWithData = async (seatId, seatData) => {
       return;
     }
 
+
     if (selectedSeats.length === 0) {
       alert('No available seats to book');
       return;
     }
+
 
     // Build dateTimeInputs for all selected seats
     const newDateTimeInputs = {};
@@ -992,6 +927,7 @@ const handleBookingWithData = async (seatId, seatData) => {
         periodTime: bulkDateTime.periodTime
       };
     });
+
 
     setDateTimeInputs(newDateTimeInputs);
     
@@ -1004,7 +940,6 @@ const handleBookingWithData = async (seatId, seatData) => {
   {isLoading ? 'Processing...' : 'Confirm Booking'}
 </button>
   </div>
-)}
 </div>
           
       </>
@@ -1013,5 +948,6 @@ const handleBookingWithData = async (seatId, seatData) => {
 </div>
   );
   }
+
 
 export default AirplaneSeatBookingAdmin;
